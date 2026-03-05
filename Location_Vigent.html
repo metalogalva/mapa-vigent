@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mapa VIGENT</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; width: 100%; }
+    #map { height: 100%; width: 100%; }
+
+    .marker-wrap {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      gap: 3px;
+    }
+
+    .marker-label {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      color: #fff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      border: 1.5px solid rgba(255,255,255,0.7);
+      letter-spacing: 0.2px;
+    }
+
+    .marker-pin {
+      width: 32px;
+      height: 32px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2.5px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      flex-shrink: 0;
+    }
+
+    .marker-pin .pin-letter {
+      transform: rotate(45deg);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-weight: 900;
+      font-size: 15px;
+      color: white;
+      line-height: 1;
+    }
+
+    .pin-vigent  { background: #C62828; }
+    .pin-parking { background: #1255B0; }
+
+    .label-vigent  { background: rgba(180, 0, 0, 0.85); font-size: 14px; }
+    .label-parking { background: rgba(16, 64, 150, 0.85); font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+  class HtmlMarker {
+    constructor(position, pinLetter, labelText, pinClass, labelClass) {
+      this.position   = position;
+      this.pinLetter  = pinLetter;
+      this.labelText  = labelText;
+      this.pinClass   = pinClass;
+      this.labelClass = labelClass;
+      this.div        = null;
+    }
+
+    onAdd() {
+      this.div = document.createElement('div');
+      this.div.className = 'marker-wrap';
+      this.div.innerHTML = `
+        <div class="marker-label ${this.labelClass}">${this.labelText}</div>
+        <div class="marker-pin ${this.pinClass}">
+          <span class="pin-letter">${this.pinLetter}</span>
+        </div>
+      `;
+      this.getPanes().floatPane.appendChild(this.div);
+    }
+
+    draw() {
+      const pos = this.getProjection().fromLatLngToDivPixel(this.position);
+      if (this.div) {
+        this.div.style.left = pos.x + 'px';
+        this.div.style.top  = pos.y + 'px';
+      }
+    }
+
+    onRemove() {
+      if (this.div) { this.div.parentNode.removeChild(this.div); this.div = null; }
+    }
+  }
+
+  function initMap() {
+    const vigentLocation = new google.maps.LatLng(41.34060954632871, -8.55365614152236);
+
+    const parques = [
+      { nome: "Estacionamento Alameda da Estação",              coords: new google.maps.LatLng(41.34011651083239,  -8.552938267163436) },
+      { nome: "Estacionamento em Frente Finanças",              coords: new google.maps.LatLng(41.33984208363609,  -8.55594831308181)  },
+      { nome: "Estacionamento Rua da Pastelaria Lírio Amarelo", coords: new google.maps.LatLng(41.339251368746076, -8.555085004495934) },
+      { nome: "Estacionamento Parque Escolar",                  coords: new google.maps.LatLng(41.3406289963525,   -8.552113736776915) }
+    ];
+
+    const estiloLimpo = [
+      { featureType: "poi",               elementType: "all",          stylers: [{ visibility: "off" }] },
+      { featureType: "poi.business",      elementType: "all",          stylers: [{ visibility: "off" }] },
+      { featureType: "poi.attraction",    elementType: "all",          stylers: [{ visibility: "off" }] },
+      { featureType: "poi.government",    elementType: "all",          stylers: [{ visibility: "off" }] },
+      { featureType: "poi.medical",       elementType: "all",          stylers: [{ visibility: "off" }] },
+      { featureType: "poi.park",          elementType: "labels",       stylers: [{ visibility: "off" }] },
+      { featureType: "poi.place_of_worship", elementType: "all",       stylers: [{ visibility: "off" }] },
+      { featureType: "poi.school",        elementType: "all",          stylers: [{ visibility: "off" }] },
+      { featureType: "poi.sports_complex",elementType: "all",          stylers: [{ visibility: "off" }] },
+      { featureType: "transit",           elementType: "all",          stylers: [{ visibility: "off" }] },
+      { featureType: "road",              elementType: "labels.icon",  stylers: [{ visibility: "off" }] }
+    ];
+
+    const map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 17,
+      center: vigentLocation,
+      mapTypeId: "hybrid",
+      styles: estiloLimpo,
+      mapTypeControl: true,
+      zoomControl: true,
+      streetViewControl: false,
+      fullscreenControl: true
+    });
+
+    Object.setPrototypeOf(HtmlMarker.prototype, google.maps.OverlayView.prototype);
+
+    // VIGENT
+    const vigent = new HtmlMarker(vigentLocation, "V", "Edifício Vigent Group", "pin-vigent", "label-vigent");
+    vigent.setMap(map);
+
+    // Estacionamentos
+    parques.forEach(p => {
+      const m = new HtmlMarker(p.coords, "P", p.nome, "pin-parking", "label-parking");
+      m.setMap(map);
+    });
+  }
+</script>
+
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCTdDP9sKD0DwXT3yB57NHYIkG6FIQZvds&callback=initMap">
+</script>
+
+</body>
+</html>
